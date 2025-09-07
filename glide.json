@@ -1,0 +1,18 @@
+[
+    {
+        "kind": "column",
+        "name": "JSON to Excel Link",
+        "description": "Convertit des données JSON en un lien de téléchargement direct pour un fichier Excel. By Goraskills",
+        "author": "Goraskills",
+        "params": [
+            {
+                "name": "jsonData",
+                "displayName": "Données JSON",
+                "type": "string"
+            }
+        ],
+        "result": {
+            "type": "string"
+        }
+    }
+]
