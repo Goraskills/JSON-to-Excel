@@ -1,61 +1,46 @@
-window.function = function (jsonData, fileName) {
-    // --- On récupère les valeurs de Glide ---
+window.function = function (jsonData) {
+    // On récupère la chaîne JSON de Glide
     const jsonString = jsonData.value ?? '[]';
-    const name = fileName.value ?? 'export';
 
-    // --- On crée le HTML qui sera affiché dans le Web Embed ---
-    const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
-            button { background-color: #1D6F42; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background-color 0.3s; }
-            button:hover { background-color: #144E2E; }
-            button:disabled { background-color: #ccc; }
-        </style>
-    </head>
-    <body>
-        <button id="downloadButton">Générer et Télécharger Excel</button>
+    try {
+        // On s'assure que le JSON est un tableau d'objets
+        const data = JSON.parse(jsonString);
+        if (!Array.isArray(data)) {
+            return "Erreur: Le JSON doit être un tableau d'objets (commençant par [).";
+        }
 
-        <script>
-            document.getElementById('downloadButton').addEventListener('click', function() {
-                const button = this;
-                button.innerText = 'Génération en cours...';
-                button.disabled = true;
+        // --- Début de la conversion ---
+        
+        // 1. SheetJS convertit le JSON en une feuille de calcul
+        const worksheet = XLSX.utils.json_to_sheet(data);
 
-                try {
-                    const data = JSON.parse(${JSON.stringify(jsonString)});
-                    const worksheet = XLSX.utils.json_to_sheet(data);
-                    const workbook = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(workbook, worksheet, 'Données');
-
-                    // On déclenche le téléchargement
-                    XLSX.writeFile(workbook, \\${name}.xlsx\);
-
-                    // --- CORRECTION : On réinitialise le bouton immédiatement ---
-                    // On change le texte pour confirmer le succès
-                    button.innerText = 'Terminé ! Téléchargement lancé.';
-                    
-                    // On réactive le bouton après un court instant pour éviter les doubles clics
-                    setTimeout(() => {
-                        button.innerText = 'Générer et Télécharger Excel';
-                        button.disabled = false;
-                    }, 2000);
-
-
-                } catch (error) {
-                    button.innerText = 'Erreur ! Vérifiez le JSON.';
-                    // En cas d'erreur, on réactive aussi le bouton
-                    button.disabled = false; 
-                    console.error(error);
+        // AMÉLIORATION : On force le type des cellules numériques
+        const range = XLSX.utils.decode_range(worksheet['!ref']);
+        for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
+            for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+                const cellAddress = XLSX.utils.encode_cell({ r: rowNum, c: colNum });
+                const cell = worksheet[cellAddress];
+                if (cell && typeof cell.v === 'number') {
+                    cell.t = 'n';
                 }
-            });
-        <\/script>
-    </body>
-    </html>
-    `;
+            }
+        }
+        
+        // 2. On crée un nouveau classeur
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Données');
 
-    // On retourne le HTML encodé pour que Glide puisse l'afficher
-    return "data:text/html;charset=utf-8," + encodeURIComponent(htmlContent);
+        // 3. On génère le fichier Excel en format Base64
+        const base64Excel = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
+
+        // 4. On construit la "Data URL", qui est un lien contenant le fichier
+        const dataUrl = data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Excel};
+
+        // 5. On retourne le lien directement à Glide
+        return dataUrl;
+
+    } catch (error) {
+        // En cas d'erreur, on renvoie le message d'erreur
+        return Erreur de conversion: ${error.message};
+    }
 }
