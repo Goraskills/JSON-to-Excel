@@ -14,6 +14,23 @@ window.function = function (jsonData) {
         // 1. SheetJS convertit le JSON en une feuille de calcul
         const worksheet = XLSX.utils.json_to_sheet(data);
 
+        // --- AMÉLIORATION : On force le type des cellules numériques ---
+        // On récupère la liste des adresses de toutes les cellules (ex: A1, B1, A2, etc.)
+        const range = XLSX.utils.decode_range(worksheet['!ref']);
+        for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
+            for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+                // On crée l'adresse de la cellule (ex: 'B2')
+                const cellAddress = XLSX.utils.encode_cell({ r: rowNum, c: colNum });
+                const cell = worksheet[cellAddress];
+
+                // Si la cellule existe et que sa valeur est un nombre,
+                // on s'assure que son type est bien 'n' (pour nombre).
+                if (cell && typeof cell.v === 'number') {
+                    cell.t = 'n';
+                }
+            }
+        }
+        
         // 2. On crée un nouveau classeur
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Données');
@@ -21,14 +38,14 @@ window.function = function (jsonData) {
         // 3. On génère le fichier Excel en format Base64
         const base64Excel = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
 
-        // 4. On construit la "Data URL", qui est un lien contenant le fichier
-        const dataUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Excel}`;
+        // 4. On construit la "Data URL"
+        const dataUrl = data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Excel};
 
         // 5. On retourne le lien directement à Glide
         return dataUrl;
 
     } catch (error) {
         // En cas d'erreur, on renvoie le message d'erreur
-        return `Erreur de conversion: ${error.message}`;
+        return Erreur de conversion: ${error.message};
     }
 }
